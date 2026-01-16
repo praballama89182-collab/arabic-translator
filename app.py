@@ -1,46 +1,98 @@
 import streamlit as st
-from deep_translator import GoogleTranslator
+from deep_translator import GoogleTranslator, MyMemoryTranslator
 
-st.set_page_config(page_title="Bi-Directional Translator", page_icon="🔄")
+# Page Configuration
+st.set_page_config(page_title="Arabic ↔ English Translator", page_icon="🌐", layout="centered")
 
-st.title("🔄 Arabic ↔ English Translator")
+# Custom CSS for a cleaner look
+st.markdown("""
+    <style>
+    .main {
+        background-color: #f5f7f9;
+    }
+    .stTextArea textarea {
+        font-size: 18px !important;
+    }
+    </style>
+    """, unsafe_allow_html=True)
 
-# Sidebar for direction selection
+st.title("🌐 Arabic ↔ English Translator")
+st.markdown("Professional translation tool for text and e-commerce listings.")
+
+# Sidebar Settings
+st.sidebar.header("Settings")
 direction = st.sidebar.radio(
     "Select Translation Direction:",
     ("Arabic to English", "English to Arabic")
 )
 
-# Set language codes based on selection
+st.sidebar.info("Tip: Use 'English to Arabic' for generating localized product keywords or descriptions.")
+
+# Language Logic
 if direction == "Arabic to English":
     source_lang, target_lang = 'ar', 'en'
-    input_label = "Arabic Text:"
+    input_label = "Arabic Text"
     placeholder = "أدخل النص هنا..."
+    btn_text = "Translate to English"
 else:
     source_lang, target_lang = 'en', 'ar'
-    input_label = "English Text:"
-    placeholder = "Enter text here..."
+    input_label = "English Text"
+    placeholder = "Enter English text here..."
+    btn_text = "Translate to Arabic"
 
-# Text Input
-source_text = st.text_area(input_label, placeholder=placeholder, height=200)
+# Text Input Area
+source_text = st.text_area(f"Enter {input_label}:", placeholder=placeholder, height=200)
 
-if st.button("Translate"):
-    if source_text.strip() == "":
+col1, col2 = st.columns([1, 5])
+with col1:
+    translate_btn = st.button(btn_text, type="primary")
+with col2:
+    if st.button("Clear"):
+        st.rerun()
+
+# Translation Logic
+if translate_btn:
+    if not source_text.strip():
         st.warning("Please enter text to translate.")
     else:
-        try:
-            translation = GoogleTranslator(source=source_lang, target=target_lang).translate(source_text)
-            
-            st.subheader("Result:")
-            # Adding 'rtl' (Right-to-Left) support for Arabic output
-            if target_lang == 'ar':
-                st.markdown(f'<p style="text-align: right; direction: rtl; font-size: 20px;">{translation}</p>', unsafe_content_bit=True)
-            else:
-                st.success(translation)
+        with st.spinner('Translating...'):
+            try:
+                # Primary Translation Attempt (Google)
+                translation = GoogleTranslator(source='auto', target=target_lang).translate(source_text)
                 
-            st.download_button("Download Result", translation, file_name="translated_text.txt")
-        except Exception as e:
-            st.error(f"Error: {e}")
+                # Validation: If Google returns empty or errors, try MyMemory
+                if not translation:
+                    translation = MyMemoryTranslator(source=source_lang, target=target_lang).translate(source_text)
+                
+                st.subheader("Result:")
+                
+                # Display logic based on language
+                if target_lang == 'ar':
+                    # Right-to-Left formatting for Arabic
+                    st.markdown(
+                        f"""
+                        <div style="background-color: #ffffff; padding: 20px; border-radius: 10px; 
+                        border: 1px solid #ddd; text-align: right; direction: rtl; 
+                        font-size: 24px; font-family: 'Arial';">
+                            {translation}
+                        </div>
+                        """, 
+                        unsafe_allow_html=True
+                    )
+                else:
+                    # Standard formatting for English
+                    st.success(translation)
+                
+                # Download Option
+                st.download_button(
+                    label="Download Translation",
+                    data=translation,
+                    file_name="translated_output.txt",
+                    mime="text/plain"
+                )
 
-st.sidebar.markdown("---")
-st.sidebar.info("This tool is useful for translating customer queries or optimizing multi-lingual backend keywords.")
+            except Exception as e:
+                st.error(f"An error occurred: {e}. Please try again in a moment.")
+
+st.divider()
+st.caption("Powered by Deep-Translator | Built for Ecommerce Workflow")
